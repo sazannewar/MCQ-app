@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 
@@ -8,6 +8,10 @@ const ExamPage = () => {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [questionTimes, setQuestionTimes] = useState([]); // Array to store time per question
+  const [timeTaken, setTimeTaken] = useState(0); // Time spent on current question
+  const timerRef = useRef(null);
+
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -22,14 +26,30 @@ const ExamPage = () => {
     fetchQuestions();
   }, [subjectId]);
 
+  // Start timing each question
+useEffect(() => {
+  setTimeTaken(0); // reset timer
+  clearInterval(timerRef.current);
+
+  timerRef.current = setInterval(() => {
+    setTimeTaken((prev) => prev + 1);
+  }, 1000);
+
+  return () => clearInterval(timerRef.current); // cleanup
+}, [currentIndex]);
+
+
   const handleOptionSelect = (option) => {
     setSelectedOption(option);
   };
 
-  const handleNext = () => {
-    setSelectedOption(null);
-    setCurrentIndex((prev) => Math.min(prev + 1, questions.length - 1));
-  };
+const handleNext = () => {
+  clearInterval(timerRef.current); // stop timer
+  setQuestionTimes((prev) => [...prev, timeTaken]); // store time
+  setSelectedOption(null);
+  setCurrentIndex((prev) => Math.min(prev + 1, questions.length - 1));
+};
+
 
   const handleSkip = () => {
     handleNext();
@@ -43,6 +63,10 @@ const ExamPage = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow">
         <h2 className="text-xl font-semibold mb-4">Question {currentIndex + 1} of {questions.length}</h2>
+        <div className="text-right mb-4 text-sm text-gray-600">
+                ⏱️ Timer: <span className="font-semibold">{timeTaken}</span>s
+        </div>
+
         <p className="text-gray-800 mb-6">{currentQuestion.question_text}</p>
 
         {/* Options */}
